@@ -1,0 +1,189 @@
+import math
+import sys
+from abc import ABC, abstractmethod
+
+
+# Базовий клас
+# ─────────────────────────────────────────────
+
+class Shape(ABC):
+    @abstractmethod
+    def perimeter(self) -> float:
+        ...
+
+    @abstractmethod
+    def area(self) -> float:
+        ...
+
+    @abstractmethod
+    def __str__(self) -> str:
+        ...
+
+# Конкретні класи
+# ─────────────────────────────────────────────
+
+class Triangle(Shape):
+    """Трикутник — визначається довжинами трьох сторін."""
+
+    def __init__(self, a: float, b: float, c: float):
+        self.a, self.b, self.c = a, b, c
+
+    def perimeter(self) -> float:
+        return self.a + self.b + self.c
+
+    def area(self) -> float:
+        s = self.perimeter() / 2
+        val = s * (s - self.a) * (s - self.b) * (s - self.c)
+        return math.sqrt(val) if val >= 0 else 0.0
+
+    def __str__(self) -> str:
+        return f"Triangle(a={self.a}, b={self.b}, c={self.c})"
+
+
+class Rectangle(Shape):
+    """Прямокутник — визначається двома сторонами."""
+
+    def __init__(self, a: float, b: float):
+        self.a, self.b = a, b
+
+    def perimeter(self) -> float:
+        return 2 * (self.a + self.b)
+
+    def area(self) -> float:
+        return self.a * self.b
+
+    def __str__(self) -> str:
+        return f"Rectangle(a={self.a}, b={self.b})"
+
+
+class Trapeze(Shape):
+    """Трапеція — визначається двома основами та двома бічними сторонами."""
+
+    def __init__(self, a: float, b: float, c: float, d: float):
+        # a, b — основи; c, d — бічні сторони
+        self.a, self.b, self.c, self.d = a, b, c, d
+
+    def perimeter(self) -> float:
+        return self.a + self.b + self.c + self.d
+
+    def area(self) -> float:
+        # Формула Герона для трапеції через основи і бічні сторони
+        a, b, c, d = self.a, self.b, self.c, self.d
+        if a == b:
+            # Паралелограм-вироджений випадок
+            h_sq = c ** 2 - ((b - a) / 2) ** 2 if c >= abs(b - a) / 2 else 0
+        else:
+            # h через діагональ формулу
+            x = (c ** 2 - d ** 2 + (b - a) * (b + a)) / (2 * (b - a))
+            h_sq = c ** 2 - x ** 2
+        h = math.sqrt(max(h_sq, 0))
+        return (self.a + self.b) / 2 * h
+
+    def __str__(self) -> str:
+        return f"Trapeze(a={self.a}, b={self.b}, c={self.c}, d={self.d})"
+
+
+class Parallelogram(Shape):
+    """Паралелограм — визначається двома сторонами та висотою."""
+
+    def __init__(self, a: float, b: float, h: float):
+        self.a, self.b, self.h = a, b, h
+
+    def perimeter(self) -> float:
+        return 2 * (self.a + self.b)
+
+    def area(self) -> float:
+        return self.a * self.h
+
+    def __str__(self) -> str:
+        return f"Parallelogram(a={self.a}, b={self.b}, h={self.h})"
+
+
+class Circle(Shape):
+    """Круг — визначається радіусом."""
+
+    def __init__(self, r: float):
+        self.r = r
+
+    def perimeter(self) -> float:
+        return 2 * math.pi * self.r
+
+    def area(self) -> float:
+        return math.pi * self.r ** 2
+
+    def __str__(self) -> str:
+        return f"Circle(r={self.r})"
+
+
+# Фабрика: рядок → об'єкт Shape
+# ─────────────────────────────────────────────
+
+def parse_shape(line: str) -> Shape | None:
+    parts = line.split()
+    if not parts:
+        return None
+    name = parts[0]
+    params = list(map(float, parts[1:]))
+    match name:
+        case "Triangle":
+            return Triangle(*params)
+        case "Rectangle":
+            return Rectangle(*params)
+        case "Trapeze":
+            return Trapeze(*params)
+        case "Parallelogram":
+            return Parallelogram(*params)
+        case "Circle":
+            return Circle(*params)
+        case _:
+            return None
+
+
+# Головна логіка
+# ─────────────────────────────────────────────
+
+def process_file(path: str) -> None:
+    shapes: list[Shape] = []
+
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            shape = parse_shape(line)
+            if shape:
+                shapes.append(shape)
+
+    if not shapes:
+        print(f"[{path}] Файл порожній або не містить фігур.")
+        return
+
+    max_area_shape   = max(shapes, key=lambda s: s.area())
+    max_perim_shape  = max(shapes, key=lambda s: s.perimeter())
+
+    print(f"\n{'=' * 55}")
+    print(f"Файл: {path}  ({len(shapes)} фігур)")
+    print(f"{'=' * 55}")
+    print(f"Найбільша ПЛОЩА:    {max_area_shape}")
+    print(f"  площа     = {max_area_shape.area():.4f}")
+    print(f"  периметр  = {max_area_shape.perimeter():.4f}")
+    print(f"\nНайбільший ПЕРИМЕТР: {max_perim_shape}")
+    print(f"  периметр  = {max_perim_shape.perimeter():.4f}")
+    print(f"  площа     = {max_perim_shape.area():.4f}")
+
+
+def main():
+    files = sys.argv[1:] if len(sys.argv) > 1 else [
+        "input01.txt", "input02.txt", "input03.txt"
+    ]
+    for path in files:
+        try:
+            process_file(path)
+        except FileNotFoundError:
+            print(f"Файл не знайдено: {path}")
+        except Exception as e:
+            print(f"Помилка при обробці {path}: {e}")
+
+
+if __name__ == "__main__":
+    main()
